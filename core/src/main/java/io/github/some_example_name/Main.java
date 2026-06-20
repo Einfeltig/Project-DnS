@@ -15,16 +15,16 @@ public class Main extends ApplicationAdapter {
     private World world;
 
     private static final int TILE_SIZE   = 8;
-    private static final int WORLD_WIDTH  = 100;
-    private static final int WORLD_HEIGHT = 100;
+    private static final int WORLD_WIDTH  = 1024;
+    private static final int WORLD_HEIGHT = 1024;
 
     @Override
     public void create() {
         shapeRenderer = new ShapeRenderer();
         camera = new OrthographicCamera();
-        camera.setToOrtho(false, 640, 480);
+        camera.setToOrtho(false,3840 , 2160);
 
-        WorldGenerator generator = new WorldGenerator(12345L);
+        WorldGenerator generator = new WorldGenerator(110L);
         world = generator.generate(WORLD_WIDTH, WORLD_HEIGHT);
     }
 

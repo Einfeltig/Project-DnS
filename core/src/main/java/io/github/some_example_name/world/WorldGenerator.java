@@ -5,7 +5,7 @@ public class WorldGenerator {
     private final long seed;
 
     public WorldGenerator(long seed) {
-        this.seed = seed;
+        this.seed = scrambleSeed(seed);
     }
 
     public World generate(int width, int height) {
@@ -16,9 +16,9 @@ public class WorldGenerator {
                 float value = getNoise(x, y);
                 TileType type;
 
-                if (value < 0.25f)      type = TileType.WATER;
-                else if (value < 0.55f) type = TileType.GRASS;
-                else if (value < 0.75f) type = TileType.STONE;
+                if (value < 0.30f)      type = TileType.WATER;
+                else if (value < 0.45f) type = TileType.GRASS;
+                else if (value < 0.60f) type = TileType.STONE;
                 else                    type = TileType.WOOD;
 
                 world.setTile(x, y, new Tile(type));
@@ -70,6 +70,12 @@ public class WorldGenerator {
 
     private float lerp(float a, float b, float t) {
         return a + (b - a) * t;
+    }
+
+    private long scrambleSeed(long seed) {
+        seed = (seed ^ (seed >>> 30)) * 0xbf58476d1ce4e5b9L;
+        seed = (seed ^ (seed >>> 27)) * 0x94d049bb133111ebL;
+        return seed ^ (seed >>> 31);
     }
 
 }
