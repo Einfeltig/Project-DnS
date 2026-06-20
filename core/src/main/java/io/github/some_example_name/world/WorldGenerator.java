@@ -18,7 +18,7 @@ public class WorldGenerator {
                 TileType type;
 
                 if (value < 0.40f)      type = TileType.WATER;
-                else if (value < 0.45f) type = TileType.SAND;
+                else if (value < 0.44f) type = TileType.SAND;
                 else if (value < 0.60f) type = TileType.GRASS;
                 else if (value < 0.70f) type = TileType.STONE;
                 else                    type = TileType.WOOD;
