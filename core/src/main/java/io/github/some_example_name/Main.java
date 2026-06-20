@@ -24,7 +24,7 @@ public class Main extends ApplicationAdapter {
         camera = new OrthographicCamera();
         camera.setToOrtho(false,3840 , 2160);
 
-        WorldGenerator generator = new WorldGenerator(110L);
+        WorldGenerator generator = new WorldGenerator(100L);
         world = generator.generate(WORLD_WIDTH, WORLD_HEIGHT);
     }
 
@@ -43,6 +43,7 @@ public class Main extends ApplicationAdapter {
                 else if (type == TileType.GRASS) shapeRenderer.setColor(Color.GREEN);
                 else if (type == TileType.STONE) shapeRenderer.setColor(Color.GRAY);
                 else if (type == TileType.WOOD)  shapeRenderer.setColor(Color.BROWN);
+                else if (type == TileType.SAND) shapeRenderer.setColor(Color.YELLOW);
 
                 shapeRenderer.rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
             }
