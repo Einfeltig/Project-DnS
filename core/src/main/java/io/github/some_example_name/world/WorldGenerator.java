@@ -6,7 +6,7 @@ public class WorldGenerator {
     private final long seed;
 
     public WorldGenerator(long seed) {
-        this.seed = seed;
+        this.seed = scrambleSeed(seed);
     }
 
     public World generate(int width, int height) {
@@ -73,5 +73,11 @@ public class WorldGenerator {
 
     private float lerp(float a, float b, float t) {
         return a + (b - a) * t;
+    }
+
+    private long scrambleSeed(long seed) {
+        seed = (seed ^ (seed >>> 30)) * 0xbf58476d1ce4e5b9L;
+        seed = (seed ^ (seed >>> 27)) * 0x94d049bb133111ebL;
+        return seed ^ (seed >>> 31);
     }
 }

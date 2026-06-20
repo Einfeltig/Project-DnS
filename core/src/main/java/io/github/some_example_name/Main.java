@@ -24,7 +24,7 @@ public class Main extends ApplicationAdapter {
         camera = new OrthographicCamera();
         camera.setToOrtho(false,3840 , 2160);
 
-        WorldGenerator generator = new WorldGenerator(100L);
+        WorldGenerator generator = new WorldGenerator(69L);
         world = generator.generate(WORLD_WIDTH, WORLD_HEIGHT);
     }
 
