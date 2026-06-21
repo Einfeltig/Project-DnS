@@ -6,11 +6,13 @@ import io.github.some_example_name.world.Tile;
 import io.github.some_example_name.world.World;
 
 public class Player {
+
+    public enum Direction { DOWN, UP, LEFT, RIGHT }
+
     private float x, y;
     private static final float SPEED = 100f;
     private boolean moving;
-    private boolean facingLeft;
-
+    private Direction direction = Direction.DOWN;
 
     public Player(float x, float y) {
         this.x = x;
@@ -31,8 +33,14 @@ public class Player {
         }
 
         moving = dx != 0 || dy != 0;
-        if (dx < 0) facingLeft = true;
-        if (dx > 0) facingLeft = false;
+
+        if (Math.abs(dx) >= Math.abs(dy)) {
+            if (dx < 0) direction = Direction.LEFT;
+            else if (dx > 0) direction = Direction.RIGHT;
+        } else {
+            if (dy > 0) direction = Direction.UP;
+            else if (dy < 0) direction = Direction.DOWN;
+        }
 
         float newX = x + dx * SPEED * delta;
         float newY = y + dy * SPEED * delta;
@@ -48,8 +56,8 @@ public class Player {
         return tile != null && tile.getType().isWalkable();
     }
 
-    public float getX() { return x; }
-    public float getY() { return y; }
-    public boolean isMoving()  { return moving; }
-    public boolean isFacingLeft() { return facingLeft; }
+    public float getX()            { return x; }
+    public float getY()            { return y; }
+    public boolean isMoving()      { return moving; }
+    public Direction getDirection(){ return direction; }
 }

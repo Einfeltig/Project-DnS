@@ -23,14 +23,15 @@ public class Main extends ApplicationAdapter {
     private World world;
     private Player player;
 
-    private Animation<TextureRegion> walkAnimation;
-    private Texture[] playerTextures;
+    private Animation<TextureRegion> walkDown, walkUp, walkLeft, walkRight;
+    private Texture[] allTextures;
     private float animTime;
 
-    private static final int TILE_SIZE    =8;
-    private static final int WORLD_WIDTH  = 1024;
-    private static final int WORLD_HEIGHT = 1024;
+    private static final int TILE_SIZE    = 32;
+    private static final int WORLD_WIDTH  = 100;
+    private static final int WORLD_HEIGHT = 100;
     private static final int SPRITE_SIZE  = 48;
+    private static final int FRAMES       = 4;
 
     @Override
     public void create() {
@@ -42,25 +43,33 @@ public class Main extends ApplicationAdapter {
         WorldGenerator generator = new WorldGenerator(12345L);
         world = generator.generate(WORLD_WIDTH, WORLD_HEIGHT);
 
-        playerTextures = new Texture[]{
-            new Texture(Gdx.files.internal("player_0.png")),
-            new Texture(Gdx.files.internal("player_1.png")),
-            new Texture(Gdx.files.internal("player_2.png")),
-            new Texture(Gdx.files.internal("player_3.png"))
-        };
-
-        TextureRegion[] frames = {
-            new TextureRegion(playerTextures[0]),
-            new TextureRegion(playerTextures[1]),
-            new TextureRegion(playerTextures[2]),
-            new TextureRegion(playerTextures[3])
-        };
-
-        walkAnimation = new Animation<>(0.15f, frames);
-        walkAnimation.setPlayMode(Animation.PlayMode.LOOP);
+        loadAnimations();
 
         float[] spawn = findSpawn();
         player = new Player(spawn[0], spawn[1]);
+    }
+
+    private void loadAnimations() {
+        String[] dirs = { "down", "up", "left", "right" };
+        allTextures = new Texture[dirs.length * FRAMES];
+        Animation<TextureRegion>[] anims = new Animation[4];
+
+        for (int d = 0; d < dirs.length; d++) {
+            TextureRegion[] frames = new TextureRegion[FRAMES];
+            for (int f = 0; f < FRAMES; f++) {
+                Texture tex = new Texture(
+                    Gdx.files.internal("player_" + dirs[d] + "_" + f + ".png"));
+                allTextures[d * FRAMES + f] = tex;
+                frames[f] = new TextureRegion(tex);
+            }
+            anims[d] = new Animation<>(0.15f, frames);
+            anims[d].setPlayMode(Animation.PlayMode.LOOP);
+        }
+
+        walkDown  = anims[0];
+        walkUp    = anims[1];
+        walkLeft  = anims[2];
+        walkRight = anims[3];
     }
 
     private float[] findSpawn() {
@@ -80,13 +89,28 @@ public class Main extends ApplicationAdapter {
         return new float[]{ cx * TILE_SIZE, cy * TILE_SIZE };
     }
 
+    private Animation<TextureRegion> getCurrentAnimation() {
+        switch (player.getDirection()) {
+            case UP:    return walkUp;
+            case LEFT:  return walkLeft;
+            case RIGHT: return walkRight;
+            default:    return walkDown;
+        }
+    }
+
     @Override
     public void render() {
         float delta = Gdx.graphics.getDeltaTime();
         player.update(delta, world, TILE_SIZE);
 
-        if (player.isMoving()) animTime += delta;
-        else animTime = 0;
+        boolean isMoving = player.isMoving();
+        if (isMoving) {
+            if (!wasMoving) animTime = 0.15f;
+            animTime += delta;
+        } else {
+            animTime = 0;
+        }
+        wasMoving = isMoving;
 
         float halfW = 320, halfH = 240;
         float camX = Math.max(halfW, Math.min(player.getX(), WORLD_WIDTH  * TILE_SIZE - halfW));
@@ -111,17 +135,13 @@ public class Main extends ApplicationAdapter {
         }
         shapeRenderer.end();
 
-        TextureRegion frame = walkAnimation.getKeyFrame(animTime);
+        TextureRegion frame = getCurrentAnimation().getKeyFrame(animTime);
         float drawX = player.getX() - SPRITE_SIZE / 2f;
         float drawY = player.getY() - SPRITE_SIZE / 2f;
 
         spriteBatch.setProjectionMatrix(camera.combined);
         spriteBatch.begin();
-        if (player.isFacingLeft()) {
-            spriteBatch.draw(frame, drawX + SPRITE_SIZE, drawY, -SPRITE_SIZE, SPRITE_SIZE);
-        } else {
-            spriteBatch.draw(frame, drawX, drawY, SPRITE_SIZE, SPRITE_SIZE);
-        }
+        spriteBatch.draw(frame, drawX, drawY, SPRITE_SIZE, SPRITE_SIZE);
         spriteBatch.end();
     }
 
@@ -129,7 +149,8 @@ public class Main extends ApplicationAdapter {
     public void dispose() {
         shapeRenderer.dispose();
         spriteBatch.dispose();
-        for (Texture t : playerTextures) t.dispose();
+        for (Texture t : allTextures) t.dispose();
     }
-}
 
+    private boolean wasMoving = false;
+}
