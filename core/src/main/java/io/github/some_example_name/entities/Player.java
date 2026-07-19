@@ -2,6 +2,7 @@ package io.github.some_example_name.entities;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import io.github.some_example_name.world.ObjectLayer;
 import io.github.some_example_name.world.Tile;
 import io.github.some_example_name.world.World;
 
@@ -19,7 +20,7 @@ public class Player {
         this.y = y;
     }
 
-    public void update(float delta, World world, int tileSize) {
+    public void update(float delta, World world, ObjectLayer objects, int tileSize) {
         float dx = 0, dy = 0;
 
         if (Gdx.input.isKeyPressed(Input.Keys.W)) dy += 1;
@@ -27,10 +28,7 @@ public class Player {
         if (Gdx.input.isKeyPressed(Input.Keys.A)) dx -= 1;
         if (Gdx.input.isKeyPressed(Input.Keys.D)) dx += 1;
 
-        if (dx != 0 && dy != 0) {
-            dx *= 0.7071f;
-            dy *= 0.7071f;
-        }
+        if (dx != 0 && dy != 0) { dx *= 0.7071f; dy *= 0.7071f; }
 
         moving = dx != 0 || dy != 0;
 
@@ -45,15 +43,17 @@ public class Player {
         float newX = x + dx * SPEED * delta;
         float newY = y + dy * SPEED * delta;
 
-        if (isWalkable(newX, y, world, tileSize)) x = newX;
-        if (isWalkable(x, newY, world, tileSize)) y = newY;
+        if (canMoveTo(newX, y,  world, objects, tileSize)) x = newX;
+        if (canMoveTo(x,  newY, world, objects, tileSize)) y = newY;
     }
 
-    private boolean isWalkable(float px, float py, World world, int tileSize) {
+    private boolean canMoveTo(float px, float py, World world, ObjectLayer objects, int tileSize) {
         int tileX = (int)(px / tileSize);
         int tileY = (int)(py / tileSize);
         Tile tile = world.getTile(tileX, tileY);
-        return tile != null && tile.getType().isWalkable();
+        if (tile == null || !tile.getType().isWalkable()) return false;
+        if (objects.isSolidAt(px, py, tileSize)) return false;
+        return true;
     }
 
     public float getX()            { return x; }
