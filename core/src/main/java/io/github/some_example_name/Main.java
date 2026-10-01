@@ -7,67 +7,57 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.maps.tiled.TiledMap;
+import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
+import com.badlogic.gdx.maps.tiled.TmxMapLoader;
+import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.utils.ScreenUtils;
 import io.github.some_example_name.entities.Player;
-import io.github.some_example_name.world.*;
-import java.util.ArrayList;
 
 public class Main extends ApplicationAdapter {
-    private SpriteBatch        spriteBatch;
-    private OrthographicCamera camera;
-    private World              world;
-    private ObjectLayer        objects;
-    private Player             player;
-    private TileRenderer       tileRenderer;
-
-    private Texture grassSheet, waterSheet, stoneSheet, sandSheet, woodSheet;
-    private Texture treeTexture;
-    private TextureRegion treeCanopy, treeTrunk;
+    private SpriteBatch                spriteBatch;
+    private OrthographicCamera         camera;
+    private TiledMap                   tiledMap;
+    private OrthogonalTiledMapRenderer mapRenderer;
+    private TiledMapTileLayer          collisionLayer;
+    private Player                     player;
 
     private Animation<TextureRegion> walkDown, walkUp, walkLeft, walkRight;
     private Texture[] allTextures;
-    private float   animTime;
-    private boolean wasMoving = false;
+    private float     animTime;
+    private boolean   wasMoving = false;
 
-    private static final int TILE_SIZE     = 32;
-    private static final int WORLD_WIDTH   = 100;
-    private static final int WORLD_HEIGHT  = 100;
-    private static final int SPRITE_SIZE   = 48;
-    private static final int FRAMES        = 4;
-    private static final int TREE_W        = 64;
-    private static final int TREE_TRUNK_H  = 22;
-    private static final int TREE_CANOPY_H = 55;
+    private static final int   TILE_SIZE  = 32;
+    private static final float UNIT_SCALE = TILE_SIZE / 16f;
+    private static final int   SPRITE_W   = 32;
+    private static final int   SPRITE_H   = 64;
+    private static final int   FRAMES     = 4;
+
+    // Render layer indices
+    private static final int[] GROUND_LAYER = { 0 };
+    private static final int[] OBJECT_LAYER = { 1 };
 
     @Override
     public void create() {
         spriteBatch = new SpriteBatch();
         camera      = new OrthographicCamera();
-        camera.setToOrtho(false, 640, 480);
+        camera.setToOrtho(false, 480, 270);
 
-        WorldGenerator generator = new WorldGenerator(12345L);
-        world   = generator.generate(WORLD_WIDTH, WORLD_HEIGHT);
-        objects = generator.getObjectLayer();
+        tiledMap    = new TmxMapLoader().load("starting_room.tmx");
+        mapRenderer = new OrthogonalTiledMapRenderer(tiledMap, UNIT_SCALE);
 
-        grassSheet   = new Texture(Gdx.files.internal("grass_tile.png"));
-        waterSheet   = new Texture(Gdx.files.internal("water_tile.png"));
-        stoneSheet   = new Texture(Gdx.files.internal("stone_tile.png"));
-        sandSheet    = new Texture(Gdx.files.internal("sand_tile.png"));
-        woodSheet = new Texture(Gdx.files.internal("grass_tile.png"));
-        tileRenderer = new TileRenderer(grassSheet, waterSheet, stoneSheet, sandSheet, woodSheet);
+        collisionLayer = (TiledMapTileLayer) tiledMap.getLayers().get("Tile Layer 2");
 
-        treeTexture = new Texture(Gdx.files.internal("tree_1.png"));
-        treeTrunk   = new TextureRegion(treeTexture, 0, TREE_CANOPY_H, TREE_W, TREE_TRUNK_H);
-        treeCanopy  = new TextureRegion(treeTexture, 0, 0,             TREE_W, TREE_CANOPY_H);
+        int mapPixelW = collisionLayer.getWidth()  * TILE_SIZE;
+        int mapPixelH = collisionLayer.getHeight() * TILE_SIZE;
+        player = new Player(mapPixelW / 2f, mapPixelH / 2f);
 
         loadAnimations();
-
-        float[] spawn = findSpawn();
-        player = new Player(spawn[0], spawn[1]);
     }
 
     private void loadAnimations() {
-        String[] dirs   = { "down", "up", "left", "right" };
-        allTextures     = new Texture[dirs.length * FRAMES];
+        String[] dirs = { "down", "up", "left", "right" };
+        allTextures   = new Texture[dirs.length * FRAMES];
         Animation<TextureRegion>[] anims = new Animation[4];
 
         for (int d = 0; d < dirs.length; d++) {
@@ -88,22 +78,6 @@ public class Main extends ApplicationAdapter {
         walkRight = anims[3];
     }
 
-    private float[] findSpawn() {
-        int cx = WORLD_WIDTH / 2, cy = WORLD_HEIGHT / 2;
-        for (int r = 0; r <= Math.max(WORLD_WIDTH, WORLD_HEIGHT); r++)
-            for (int dx = -r; dx <= r; dx++)
-                for (int dy = -r; dy <= r; dy++) {
-                    int tx = cx + dx, ty = cy + dy;
-                    Tile t = world.getTile(tx, ty);
-                    if (t == null || !t.getType().isWalkable()) continue;
-                    float px = tx * TILE_SIZE + TILE_SIZE / 2f;
-                    float py = ty * TILE_SIZE + TILE_SIZE / 2f;
-                    if (!objects.isSolidAt(px, py, TILE_SIZE))
-                        return new float[]{ px, py };
-                }
-        return new float[]{ cx * TILE_SIZE, cy * TILE_SIZE };
-    }
-
     private Animation<TextureRegion> getCurrentAnim() {
         switch (player.getDirection()) {
             case UP:    return walkUp;
@@ -116,7 +90,7 @@ public class Main extends ApplicationAdapter {
     @Override
     public void render() {
         float delta = Gdx.graphics.getDeltaTime();
-        player.update(delta, world, objects, TILE_SIZE);
+        player.update(delta, collisionLayer, TILE_SIZE);
 
         boolean isMoving = player.isMoving();
         if (isMoving) {
@@ -127,69 +101,45 @@ public class Main extends ApplicationAdapter {
         }
         wasMoving = isMoving;
 
-        float halfW = 320, halfH = 240;
-        float camX = Math.max(halfW, Math.min(player.getX(), WORLD_WIDTH  * TILE_SIZE - halfW));
-        float camY = Math.max(halfH, Math.min(player.getY(), WORLD_HEIGHT * TILE_SIZE - halfH));
+        int mapPixelW = collisionLayer.getWidth()  * TILE_SIZE;
+        int mapPixelH = collisionLayer.getHeight() * TILE_SIZE;
+        float halfW   = 240, halfH = 135;
+        float camX = Math.max(halfW, Math.min(player.getX(), mapPixelW - halfW));
+        float camY = Math.max(halfH, Math.min(player.getY(), mapPixelH - halfH));
         camera.position.set(camX, camY, 0);
         camera.update();
 
         ScreenUtils.clear(0, 0, 0, 1);
+
+        mapRenderer.setView(camera);
+
+        // 1. Draw ground layer
+        mapRenderer.render(GROUND_LAYER);
+
+        // 2. Draw player on top of ground
         spriteBatch.setProjectionMatrix(camera.combined);
         spriteBatch.begin();
-
-        // 1. Ground tiles
-        for (int x = 0; x < world.getWidth(); x++)
-            for (int y = 0; y < world.getHeight(); y++)
-                tileRenderer.draw(spriteBatch, world.getTile(x, y).getType(),
-                    x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE);
-
-        // 2. Y-sorted layer: trunks and player
-        // Higher Y = further north = drawn first = appears behind
-        TextureRegion frame    = getCurrentAnim().getKeyFrame(animTime);
-        float playerDrawX      = player.getX() - SPRITE_SIZE / 2f;
-        float playerDrawY      = player.getY() - SPRITE_SIZE / 2f;
-
-        ArrayList<float[]> sorted = new ArrayList<>();
-        // {sortY, type, drawX, drawY}  type: 0 = trunk, 1 = player
-        sorted.add(new float[]{ playerDrawY, 1, playerDrawX, playerDrawY });
-
-        for (WorldObject obj : objects.getAll()) {
-            if (!obj.isDestroyed())
-                sorted.add(new float[]{
-                    obj.getTileY() * TILE_SIZE, 0,
-                    obj.getTileX() * TILE_SIZE,
-                    obj.getTileY() * TILE_SIZE });
-        }
-
-        sorted.sort((a, b) -> Float.compare(b[0], a[0]));
-
-        for (float[] op : sorted) {
-            if (op[1] == 1)
-                spriteBatch.draw(frame, op[2], op[3], SPRITE_SIZE, SPRITE_SIZE);
-            else
-                spriteBatch.draw(treeTrunk, op[2], op[3], TREE_W, TREE_TRUNK_H);
-        }
-
-        // 3. Canopies always on top
-        for (WorldObject obj : objects.getAll()) {
-            if (obj.isDestroyed()) continue;
-            spriteBatch.draw(treeCanopy,
-                obj.getTileX() * TILE_SIZE,
-                obj.getTileY() * TILE_SIZE + TREE_TRUNK_H,
-                TREE_W, TREE_CANOPY_H);
-        }
-
+        TextureRegion frame = getCurrentAnim().getKeyFrame(animTime);
+        spriteBatch.draw(frame,
+            player.getX() - SPRITE_W / 2f,
+            player.getY() - SPRITE_H / 2f,
+            SPRITE_W, SPRITE_H);
         spriteBatch.end();
+
+        // 3. Draw object layer (trees, fence) in front of player
+        mapRenderer.render(OBJECT_LAYER);
+    }
+
+    @Override
+    public void resize(int width, int height) {
+        camera.setToOrtho(false, 480, 270);
     }
 
     @Override
     public void dispose() {
         spriteBatch.dispose();
-        grassSheet.dispose(); waterSheet.dispose();
-        stoneSheet.dispose(); sandSheet.dispose();
-        woodSheet.dispose();
-        treeTexture.dispose();
-        tileRenderer.dispose();
+        tiledMap.dispose();
+        mapRenderer.dispose();
         for (Texture t : allTextures) t.dispose();
     }
 }
